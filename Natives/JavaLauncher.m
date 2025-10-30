@@ -22,7 +22,7 @@
 
 extern char **environ;
 
-BOOL validateVirtualMemorySpace(int size) {
+BOOL validateVirtualMemorySpace(size_t size) {
     size <<= 20; // convert to MB
     void *map = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     // check if process successfully maps and unmaps a contiguous range
@@ -102,15 +102,22 @@ void init_loadCustomJvmFlags(int* argc, const char** argv) {
 int launchJVM(NSString *username, id launchTarget, int width, int height, int minVersion) {
     NSLog(@"[JavaLauncher] Beginning JVM launch");
 
-    if ([NSFileManager.defaultManager fileExistsAtPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"LCAppInfo.plist"]]) {
+    BOOL jit26UniversalScript = getPrefBool(@"debug.debug_universal_script_jit");
+    BOOL jit26AlwaysAttached = getPrefBool(@"debug.debug_always_attached_jit");
+    if(jit26UniversalScript) {
+        JIT26SendJITScript([NSString stringWithContentsOfFile:[NSBundle.mainBundle pathForResource:@"JIT26Script" ofType:@"js"]]);
+        JIT26SetDetachAfterFirstBr(!jit26AlwaysAttached);
+        // make sure we don't get stuck in EXC_BAD_ACCESS
+        task_set_exception_ports(mach_task_self(), EXC_MASK_BAD_ACCESS, 0, EXCEPTION_DEFAULT, MACHINE_THREAD_STATE);
+    }
+
+    if ([NSFileManager.defaultManager fileExistsAtPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"LCAppInfo.plist"]] && !@available(iOS 26.0, *)) {
         NSDebugLog(@"[JavaLauncher] Running in LiveContainer, skipping dyld patch");
+    } else if(!@available(iOS 26.0, *) || jit26AlwaysAttached) {
+        // Activate Library Validation bypass for external runtime and dylibs (JNA, etc)
+        init_bypassDyldLibValidation();
     } else {
-        if(@available(iOS 19.0, *)) {
-            // Disable Library Validation bypass for iOS 26 because of stricter JIT
-        } else {
-            // Activate Library Validation bypass for external runtime and dylibs (JNA, etc)
-            init_bypassDyldLibValidation();
-        }
+        // Disable Library Validation bypass for iOS 26 TXM because of stricter JIT
     }
 
 
@@ -244,6 +251,11 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     // Workaround random stack guard allocation crashes
     margv[++margc] = "-XX:+UnlockExperimentalVMOptions";
     margv[++margc] = "-XX:+DisablePrimordialThreadGuardPages";
+
+    // On iOS 26, use mirror mapped JIT by default
+    if (@available(iOS 26.0, *)) {
+        margv[++margc] = "-XX:+MirrorMappedCodeCache";
+    }
 
     // Disable Forge 1.16.x early progress window
     margv[++margc] = "-Dfml.earlyprogresswindow=false";

@@ -250,16 +250,22 @@ check:
 		$(info $(shell printf "%-20s" "$(v)") = $(value $(v)))) \
 	)
 
+<<<<<<< HEAD
 native:
 	echo '[Coral v$(VERSION)] native - start'
+=======
+native: dep_mg
+	echo '[Coral v$(VERSION)] native - start'
+>>>>>>> upstream/main
 	mkdir -p $(WORKINGDIR)
-	cd $(WORKINGDIR) && cmake . \
+	cd $(WORKINGDIR) && cmake \
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_CROSSCOMPILING=true \
 		-DCMAKE_SYSTEM_NAME=Darwin \
 		-DCMAKE_SYSTEM_PROCESSOR=aarch64 \
 		-DCMAKE_OSX_SYSROOT="$(SDKPATH)" \
 		-DCMAKE_OSX_ARCHITECTURES=arm64 \
+		-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
 		-DCMAKE_C_FLAGS="-arch arm64" \
 		-DCONFIG_BRANCH="$(BRANCH)" \
 		-DCONFIG_COMMIT="$(COMMIT)" \
@@ -295,6 +301,25 @@ jre: native
 	cp $(WORKINGDIR)/libawt_xawt.dylib $(OUTPUTDIR)/java_runtimes/java-21-openjdk/lib
 	echo '[Coral v$(VERSION)] jre - end'
 
+dep_mg:
+	echo '[Amethyst v$(VERSION)] dep_mg - start'
+	mkdir -p $(WORKINGDIR)/mobileglues
+	cd $(WORKINGDIR)/mobileglues && cmake \
+		-DMACOS="1" \
+		-DCMAKE_CROSSCOMPILING=true \
+		-DCMAKE_SYSTEM_NAME=Darwin \
+		-DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+		-DCMAKE_OSX_SYSROOT="$(SDKPATH)" \
+		-DCMAKE_OSX_ARCHITECTURES=arm64 \
+		-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+		-DCMAKE_C_FLAGS="-arch arm64" \
+		$(SOURCEDIR)/Natives/external/MobileGlues/src/main/cpp/
+
+	cmake --build $(WORKINGDIR)/mobileglues --config RelWithDebInfo -j$(JOBS) --target mobileglues
+	cp $(WORKINGDIR)/mobileglues/libmobileglues.dylib $(WORKINGDIR)/libmobileglues.dylib
+	cp $(SOURCEDIR)/Natives/external/MobileGlues/src/main/cpp/libraries/ios/libspirv-cross-c-shared.0.dylib $(WORKINGDIR)/libspirv-cross-c-shared.0.dylib
+	echo '[Amethyst v$(VERSION)] dep_mg - end'
+
 assets:
 	echo '[Coral v$(VERSION)] assets - start'
 	if [ '$(IOS)' = '0' ] && [ '$(DETECTPLAT)' = 'Darwin' ]; then \
@@ -313,6 +338,7 @@ assets:
 	fi
 	echo '[Coral v$(VERSION)] assets - end'
 
+<<<<<<< HEAD
 payload: native java jre assets
 	echo '[Coral v$(VERSION)] payload - start'
 	$(call METHOD_DIRCHECK,$(WORKINGDIR)/Coral.app/libs)
@@ -325,6 +351,20 @@ payload: native java jre assets
 	cp $(SOURCEDIR)/JavaApp/build/*.jar $(WORKINGDIR)/Coral.app/libs/ || exit 1
 	cp -R $(SOURCEDIR)/JavaApp/libs/caciocavallo/* $(WORKINGDIR)/Coral.app/libs_caciocavallo || exit 1
 	cp -R $(SOURCEDIR)/JavaApp/libs/caciocavallo17/* $(WORKINGDIR)/Coral.app/libs_caciocavallo17 || exit 1
+=======
+payload: native dep_mg java jre assets
+	echo '[Amethyst v$(VERSION)] payload - start'
+	$(call METHOD_DIRCHECK,$(WORKINGDIR)/AngelAuraAmethyst.app/libs)
+	$(call METHOD_DIRCHECK,$(WORKINGDIR)/AngelAuraAmethyst.app/libs_caciocavallo)
+	$(call METHOD_DIRCHECK,$(WORKINGDIR)/AngelAuraAmethyst.app/libs_caciocavallo17)
+	cp -R $(SOURCEDIR)/Natives/resources/en.lproj/LaunchScreen.storyboardc $(WORKINGDIR)/AngelAuraAmethyst.app/Base.lproj/ || exit 1
+	cp -R $(SOURCEDIR)/Natives/resources/* $(WORKINGDIR)/AngelAuraAmethyst.app/ || exit 1
+	cp $(WORKINGDIR)/*.dylib $(WORKINGDIR)/AngelAuraAmethyst.app/Frameworks/ || exit 1
+	cp -R $(SOURCEDIR)/JavaApp/libs/others/* $(WORKINGDIR)/AngelAuraAmethyst.app/libs/ || exit 1
+	cp $(SOURCEDIR)/JavaApp/build/*.jar $(WORKINGDIR)/AngelAuraAmethyst.app/libs/ || exit 1
+	cp -R $(SOURCEDIR)/JavaApp/libs/caciocavallo/* $(WORKINGDIR)/AngelAuraAmethyst.app/libs_caciocavallo || exit 1
+	cp -R $(SOURCEDIR)/JavaApp/libs/caciocavallo17/* $(WORKINGDIR)/AngelAuraAmethyst.app/libs_caciocavallo17 || exit 1
+>>>>>>> upstream/main
 	$(call METHOD_DIRCHECK,$(OUTPUTDIR)/Payload)
 	cp -R $(WORKINGDIR)/Coral.app $(OUTPUTDIR)/Payload
 	if [ '$(SLIMMED_ONLY)' != '1' ]; then \
@@ -398,7 +438,12 @@ codesign:
 	cp '$(PROVISIONING)' $(OUTPUTDIR)/Payload/Coral.app/embedded.mobileprovision
 	$(call METHOD_MACHO,$(OUTPUTDIR)/Payload/Coral.app,$(call METHOD_CODESIGN,$(SIGNING_TEAMID),$$file))
 	$(call METHOD_MACHO,$(OUTPUTDIR)/java_runtimes,$(call METHOD_CODESIGN,$(SIGNING_TEAMID),$$file))
+<<<<<<< HEAD
 	echo '[Coral v$(VERSION)] codesign - end'
+=======
+	echo '[Amethyst v$(VERSION)] codesign - end'
+
+>>>>>>> upstream/main
 clean:
 	echo '[Coral v$(VERSION)] clean - start'
 	rm -rf $(WORKINGDIR)

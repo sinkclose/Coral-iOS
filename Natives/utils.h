@@ -36,6 +36,7 @@
 
 #define RENDERER_NAME_GL4ES "libgl4es_114.dylib"
 #define RENDERER_NAME_MTL_ANGLE "libtinygl4angle.dylib"
+#define RENDERER_NAME_MOBILEGLUES "libmobileglues.dylib"
 #define RENDERER_NAME_VK_ZINK "libOSMesa.8.dylib"
 
 #define SPECIALBTN_KEYBOARD -1
@@ -56,6 +57,14 @@ BOOL debugLogEnabled, isJailbroken;
 #define CS_DEBUGGED 0x10000000
 int csops(pid_t pid, unsigned int ops, void *useraddr, size_t usersize);
 BOOL isJITEnabled(BOOL checkCSOps);
+// used for large memory regions
+void* JIT26PrepareRegion(void *addr, size_t len);
+// same as JIT26PrepareRegion, but used for smaller memory regions
+// and retain content instead of filling 0x69
+void JIT26PrepareRegionForPatching(void *addr, size_t len);
+void JIT26SetDetachAfterFirstBr(BOOL value);
+void JIT26SendJITScript(NSString* script);
+BOOL DeviceRequiresTXMWorkaround(void);
 
 // Init functions
 void init_bypassDyldLibValidation();
