@@ -116,13 +116,34 @@ void CTCClipboard_nQuerySystemClipboard(JNIEnv *env, jclass clazz) {
     // From Java_net_kdt_pojavlaunch_AWTInputBridge_nativeClipboardReceived
     // Note: we cannot use main_queue here as it will cause deadlock
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        JNIEnv *env;
-        (*runtimeJavaVMPtr)->AttachCurrentThread(runtimeJavaVMPtr, &env, NULL);
-        const char* mimeChars = "text/plain";
-        (*env)->CallStaticVoidMethod(env, class_CTCClipboard, method_SystemClipboardDataReceived,
-            UIKit_accessClipboard(env, CLIPBOARD_PASTE, NULL),
-            (*env)->NewStringUTF(env, mimeChars));
-        (*runtimeJavaVMPtr)->DetachCurrentThread(runtimeJavaVMPtr);
+        // Check if JavaVM is initialized
+        if (!runtimeJavaVMPtr) {
+            NSLog(@"[ERROR] CTCClipboard: JavaVM not initialized");
+            return;
+        }
+        
+        JNIEnv *env = NULL;
+        jint attachResult = (*runtimeJavaVMPtr)->AttachCurrentThread(runtimeJavaVMPtr, &env, NULL);
+        if (attachResult != JNI_OK || !env) {
+            NSLog(@"[ERROR] CTCClipboard: Failed to attach thread: %d", attachResult);
+            return;
+        }
+        
+        @try {
+            const char* mimeChars = "text/plain";
+            (*env)->CallStaticVoidMethod(env, class_CTCClipboard, method_SystemClipboardDataReceived,
+                UIKit_accessClipboard(env, CLIPBOARD_PASTE, NULL),
+                (*env)->NewStringUTF(env, mimeChars));
+            
+            // Check for Java exceptions
+            if ((*env)->ExceptionCheck(env)) {
+                NSLog(@"[ERROR] CTCClipboard: Java exception occurred");
+                (*env)->ExceptionDescribe(env);
+                (*env)->ExceptionClear(env);
+            }
+        } @finally {
+            (*runtimeJavaVMPtr)->DetachCurrentThread(runtimeJavaVMPtr);
+        }
     });
 }
 

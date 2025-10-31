@@ -241,9 +241,21 @@ typedef NS_ENUM(NSUInteger, LauncherProfilesTableSection) {
     UIAlertAction *ok = [UIAlertAction actionWithTitle:localize(@"OK", nil) style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
         [PLProfiles.current.profiles removeObjectForKey:cell.textLabel.text];
         if ([PLProfiles.current.selectedProfileName isEqualToString:cell.textLabel.text]) {
-            // The one being deleted is the selected one, switch to the random one now
-            PLProfiles.current.selectedProfileName = PLProfiles.current.profiles.allKeys[0];
-            [self.navigationController performSelector:@selector(reloadProfileList)];
+            // The one being deleted is the selected one, switch to another one
+            if (PLProfiles.current.profiles.count > 0) {
+                // Switch to the first available profile
+                PLProfiles.current.selectedProfileName = PLProfiles.current.profiles.allKeys[0];
+                [self.navigationController performSelector:@selector(reloadProfileList)];
+            } else {
+                // No profiles left, create a default one
+                NSLog(@"[Profiles] No profiles left, creating default profile");
+                PLProfiles.current.profiles[@"(Default)"] = @{
+                    @"name": @"(Default)",
+                    @"lastVersionId": @"latest-release"
+                };
+                PLProfiles.current.selectedProfileName = @"(Default)";
+                [self.navigationController performSelector:@selector(reloadProfileList)];
+            }
         } else {
             [PLProfiles.current save];
         }

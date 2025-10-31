@@ -607,7 +607,13 @@ static GameSurfaceView* pojavWindow;
         }
 
         if (touchEvent == self.primaryTouch) {
-            if ([self isTouchInactive:self.primaryTouch]) return; // FIXME: should be? ACTION_UP will never be sent
+            if ([self isTouchInactive:self.primaryTouch]) {
+                // Send ACTION_UP before returning to prevent buttons from getting stuck
+                if (event != ACTION_DOWN) {
+                    [self sendTouchPoint:locationInView withEvent:ACTION_UP];
+                }
+                return;
+            }
             if (event == ACTION_MOVE && isGrabbing) {
                 event = ACTION_MOVE_MOTION;
                 CGPoint prevLocationInView = [touchEvent previousLocationInView:self.rootView];
