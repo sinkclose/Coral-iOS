@@ -249,10 +249,10 @@ typedef NS_ENUM(NSUInteger, LauncherProfilesTableSection) {
             } else {
                 // No profiles left, create a default one
                 NSLog(@"[Profiles] No profiles left, creating default profile");
-                PLProfiles.current.profiles[@"(Default)"] = @{
+                PLProfiles.current.profiles[@"(Default)"] = [@{
                     @"name": @"(Default)",
                     @"lastVersionId": @"latest-release"
-                };
+                } mutableCopy];
                 PLProfiles.current.selectedProfileName = @"(Default)";
                 [self.navigationController performSelector:@selector(reloadProfileList)];
             }
